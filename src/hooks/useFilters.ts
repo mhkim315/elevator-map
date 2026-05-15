@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { CompactRecord, FilterState } from '../types';
 import { applyFilters, extractAvailableYears } from '../utils/filterUtils';
 import { DEFAULT_GRADES } from '../constants';
@@ -7,8 +7,15 @@ export function useFilters(buildings: CompactRecord[]) {
   const [grades, setGrades] = useState<string[]>([...DEFAULT_GRADES]);
   const [regions, setRegions] = useState<string[]>([]);
   const [buildingTypes, setBuildingTypes] = useState<string[]>([]);
-  const [yearsRange, setYearsRange] = useState<[number, number]>(() => extractAvailableYears(buildings));
+  const [yearsRange, setYearsRange] = useState<[number, number]>([1900, 2099]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 데이터 로드 후 실제 연도 범위로 갱신
+  useEffect(() => {
+    if (buildings.length > 0) {
+      setYearsRange(extractAvailableYears(buildings));
+    }
+  }, [buildings]);
 
   const filters: FilterState = useMemo(() => ({
     grades,
