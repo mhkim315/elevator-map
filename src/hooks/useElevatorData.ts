@@ -19,60 +19,48 @@ export function useElevatorData(): UseElevatorDataResult {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      try {
-        setProgress(0);
-        const resp = await fetch(DATA_URL);
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', DATA_URL, true);
+    xhr.responseType = 'text';
 
-        if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
-
-        const reader = resp.body?.getReader();
-        if (!reader) throw new Error('Response body is not readable');
-
-        const contentLength = parseInt(resp.headers.get('Content-Length') || '0');
-        let receivedLength = 0;
-        const chunks: Uint8Array[] = [];
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          chunks.push(value);
-          receivedLength += value.length;
-          if (contentLength > 0) {
-            setProgress(Math.round((receivedLength / contentLength) * 80));
-          }
-        }
-
-        setProgress(85);
-
-        // Combine chunks and decode
-        const allBytes = new Uint8Array(receivedLength);
-        let position = 0;
-        for (const chunk of chunks) {
-          allBytes.set(chunk, position);
-          position += chunk.length;
-        }
-
-        const text = new TextDecoder('utf-8').decode(allBytes);
-        setProgress(95);
-
-        const parsed: ElevatorDataset = JSON.parse(text);
-        setProgress(100);
-
-        if (!cancelled) {
-          setData(parsed);
-          setLoading(false);
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : '데이터 로드 실패');
-          setLoading(false);
-        }
+    xhr.onprogress = (e) => {
+      if (e.lengthComputable) {
+        setProgress(Math.round((e.loaded / e.total) * 80));
+      } else {
+        // Content-Length 없으면 청크 수로 대략적 표시
+        setProgress(Math.min(79, Math.floor(e.loaded / 500000)));
       }
-    }
+    };
 
-    load();
-    return () => { cancelled = true; };
+    xhr.onload = () => {
+      if (cancelled) return;
+      if (xhr.status !== 200) {
+        setError(`HTTP ${xhr.status}: ${xhr.statusText}`);
+        setLoading(false);
+        return;
+      }
+      setProgress(85);
+      try {
+        setProgress(90);
+        const parsed: ElevatorDataset = JSON.parse(xhr.responseText);
+        setProgress(100);
+        setData(parsed);
+        setLoading(false);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'JSON 파싱 실패');
+        setLoading(false);
+      }
+    };
+
+    xhr.onerror = () => {
+      if (!cancelled) {
+        setError('네트워크 오류');
+        setLoading(false);
+      }
+    };
+
+    xhr.send();
+    return () => { cancelled = true; xhr.abort(); };
   }, []);
 
   return { data, loading, error, progress };
