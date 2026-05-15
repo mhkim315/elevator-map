@@ -1,53 +1,60 @@
 import { useState, useEffect } from 'react';
-import { ElevatorDataset } from '../types';
+import { ElevatorDataset, RegionsDataset } from '../types';
 
-const DATA_URL = '/elevator-map/data/elevators.json';
+const DATA_BASE = '/elevator-map/data';
 
-interface UseElevatorDataResult {
+interface UseRegionDataResult {
   data: ElevatorDataset | null;
   loading: boolean;
   error: string | null;
   progress: number;
 }
 
-export function useElevatorData(): UseElevatorDataResult {
+export function useRegionData(regionName: string | null): UseRegionDataResult {
   const [data, setData] = useState<ElevatorDataset | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    let cancelled = false;
+    if (!regionName) {
+      setData(null);
+      setLoading(false);
+      setError(null);
+      setProgress(0);
+      return;
+    }
 
+    let cancelled = false;
+    setLoading(true);
+    setProgress(0);
+    setError(null);
+
+    const url = `${DATA_BASE}/${encodeURIComponent(regionName)}.json`;
     const xhr = new XMLHttpRequest();
-    xhr.open('GET', DATA_URL, true);
+    xhr.open('GET', url, true);
     xhr.responseType = 'text';
 
     xhr.onprogress = (e) => {
       if (e.lengthComputable) {
-        setProgress(Math.round((e.loaded / e.total) * 80));
-      } else {
-        // Content-Length 없으면 청크 수로 대략적 표시
-        setProgress(Math.min(79, Math.floor(e.loaded / 500000)));
+        setProgress(Math.min(90, Math.round((e.loaded / e.total) * 90)));
       }
     };
 
     xhr.onload = () => {
       if (cancelled) return;
       if (xhr.status !== 200) {
-        setError(`HTTP ${xhr.status}: ${xhr.statusText}`);
+        setError(`HTTP ${xhr.status}`);
         setLoading(false);
         return;
       }
-      setProgress(85);
       try {
-        setProgress(90);
         const parsed: ElevatorDataset = JSON.parse(xhr.responseText);
         setProgress(100);
         setData(parsed);
         setLoading(false);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'JSON 파싱 실패');
+        setError(err instanceof Error ? err.message : '파싱 실패');
         setLoading(false);
       }
     };
@@ -61,7 +68,39 @@ export function useElevatorData(): UseElevatorDataResult {
 
     xhr.send();
     return () => { cancelled = true; xhr.abort(); };
-  }, []);
+  }, [regionName]);
 
   return { data, loading, error, progress };
+}
+
+export function useRegionsList() {
+  const [regions, setRegions] = useState<RegionsDataset | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch(`${DATA_BASE}/regions.json`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
+      .then((data: RegionsDataset) => {
+        if (!cancelled) {
+          setRegions(data);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'regions.json 로드 실패');
+          setLoading(false);
+        }
+      });
+
+    return () => { cancelled = true; };
+  }, []);
+
+  return { regions, loading, error };
 }

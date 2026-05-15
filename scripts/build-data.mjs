@@ -232,6 +232,17 @@ function buildCompactJSON(buildingMap) {
   return dataset;
 }
 
+// === 5b. 지역별 분할 ===
+function splitByRegion(dataset) {
+  const byRegion = {};
+  for (const b of dataset.buildings) {
+    const region = b[10] || '기타';
+    if (!byRegion[region]) byRegion[region] = [];
+    byRegion[region].push(b);
+  }
+  return byRegion;
+}
+
 // === 6. 메인 ===
 function main() {
   console.log('=== 노후 승강기 영업 지도 데이터 파이프라인 ===\n');
@@ -257,16 +268,44 @@ function main() {
 
   const dataset = buildCompactJSON(mergedMap);
 
-  // 출력
+  // 전체 JSON 출력
   const json = JSON.stringify(dataset);
   mkdirSync(dirname(OUTPUT), { recursive: true });
   writeFileSync(OUTPUT, json, 'utf-8');
+
+  // 지역별 분할 출력
+  const dataDir = dirname(OUTPUT);
+  const byRegion = splitByRegion(dataset);
+  const regionMeta = [];
+
+  for (const [region, buildings] of Object.entries(byRegion)) {
+    const regionData = {
+      meta: { ...dataset.meta, region, regionBuildings: buildings.length },
+      buildings,
+    };
+    const filename = `${region}.json`;
+    writeFileSync(`${dataDir}/${filename}`, JSON.stringify(regionData), 'utf-8');
+    const size = Buffer.byteLength(JSON.stringify(regionData), 'utf-8');
+    regionMeta.push({ name: region, count: buildings.length, file: filename, size });
+    console.log(`  [지역] ${region}: ${buildings.length.toLocaleString()}건, ${(size/1024/1024).toFixed(1)}MB`);
+  }
+
+  // 지역 메타 파일 (regions.json)
+  const regionsInfo = {
+    updated: dataset.meta.updated,
+    totalBuildings: dataset.meta.totalBuildings,
+    totalElevators: dataset.meta.totalElevators,
+    regions: regionMeta.sort((a, b) => b.count - a.count),
+    manufacturers: dataset.meta.manufacturers,
+    buildingTypes: dataset.meta.buildingTypes,
+  };
+  writeFileSync(`${dataDir}/regions.json`, JSON.stringify(regionsInfo), 'utf-8');
 
   const bytes = Buffer.byteLength(json, 'utf-8');
   console.log(`\n=== 완료 ===`);
   console.log(`  건물 수: ${dataset.meta.totalBuildings.toLocaleString()}`);
   console.log(`  승강기 수: ${dataset.meta.totalElevators.toLocaleString()}`);
-  console.log(`  JSON 크기: ${(bytes / 1024 / 1024).toFixed(1)}MB`);
+  console.log(`  전체 JSON 크기: ${(bytes / 1024 / 1024).toFixed(1)}MB`);
   console.log(`  지역(시도): ${dataset.meta.regions.length}개`);
   console.log(`  제조업체: ${dataset.meta.manufacturers.length}개`);
   console.log(`  건물용도: ${dataset.meta.buildingTypes.length}개`);

@@ -53,4 +53,20 @@ export const GRADE_LABELS: Record<string, string> = {
   E: '10년 미만 (신규)',
 };
 
+export interface RegionInfo {
+  name: string;
+  count: number;
+  file: string;
+  size: number;
+}
+
+export interface RegionsDataset {
+  updated: string;
+  totalBuildings: number;
+  totalElevators: number;
+  regions: RegionInfo[];
+  manufacturers: string[];
+  buildingTypes: string[];
+}
+
 export type ViewMode = 'map' | 'table';
