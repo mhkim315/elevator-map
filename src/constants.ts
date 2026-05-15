@@ -7,8 +7,8 @@ export const DEFAULT_ZOOM = 7;
 export const MIN_ZOOM = 6;
 export const MAX_ZOOM = 18;
 
-export const OPENFREEMAP_TILE = 'https://tiles.openfreemap.org/{z}/{x}/{y}.png';
-export const OPENFREEMAP_ATTR = '&copy; <a href="https://openfreemap.org">OpenFreeMap</a>';
+export const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const TILE_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 
 export const ALL_GRADES = ['A', 'B', 'C', 'D', 'E'] as const;
 export const DEFAULT_GRADES = ['A', 'B', 'C'];

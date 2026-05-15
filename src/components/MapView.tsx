@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { CompactRecord } from '../types';
 import { getGradeColor } from '../utils/gradeUtils';
-import { DEFAULT_CENTER, DEFAULT_ZOOM, OPENFREEMAP_TILE, OPENFREEMAP_ATTR } from '../constants';
+import { DEFAULT_CENTER, DEFAULT_ZOOM, TILE_URL, TILE_ATTR } from '../constants';
 
 // Fix default marker icon path issue
 L.Icon.Default.mergeOptions({
@@ -189,7 +189,7 @@ export default function MapView({ buildings }: MapViewProps) {
         className="absolute inset-0"
         zoomControl={true}
       >
-        <TileLayer url={OPENFREEMAP_TILE} attribution={OPENFREEMAP_ATTR} />
+        <TileLayer url={TILE_URL} attribution={TILE_ATTR} />
         <MapContent buildings={buildings} />
       </MapContainer>
     </div>
