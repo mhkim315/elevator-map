@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import 'leaflet.markercluster';
+import 'leaflet.heat';
 import { CompactRecord } from '../types';
 import { getGradeColor } from '../utils/gradeUtils';
 import { DEFAULT_CENTER, DEFAULT_ZOOM, TILE_URL, TILE_ATTR } from '../constants';
