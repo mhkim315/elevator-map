@@ -1,13 +1,11 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { CompactRecord } from '../types';
 import { getGradeColor } from '../utils/gradeUtils';
 import { DEFAULT_CENTER, DEFAULT_ZOOM, OPENFREEMAP_TILE, OPENFREEMAP_ATTR } from '../constants';
-import BuildingPopup from './BuildingPopup';
 
 // Fix default marker icon path issue
-delete (L.Icon.Default.prototype as Record<string, unknown>)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -16,24 +14,13 @@ L.Icon.Default.mergeOptions({
 
 interface MapViewProps {
   buildings: CompactRecord[];
-  onBuildingSelect?: (b: CompactRecord) => void;
 }
 
 /** Renders markers and heatmap inside the map */
 function MapContent({ buildings }: { buildings: CompactRecord[] }) {
   const map = useMap();
-  const markersRef = useRef<L.LayerGroup | null>(null);
   const heatRef = useRef<L.LayerGroup | null>(null);
   const clusterGroupRef = useRef<L.MarkerClusterGroup | null>(null);
-
-  const markers = useMemo(() => {
-    return buildings.map((b) => ({
-      pos: [b[2], b[3]] as [number, number],
-      grade: b[8],
-      data: b,
-      count: b[9],
-    }));
-  }, [buildings]);
 
   useEffect(() => {
     // Clean up previous layers
@@ -41,17 +28,16 @@ function MapContent({ buildings }: { buildings: CompactRecord[] }) {
     if (heatRef.current) map.removeLayer(heatRef.current);
 
     // Create marker cluster group
-    const clusterGroup = L.markerClusterGroup({
+    const clusterGroup = new L.MarkerClusterGroup({
       chunkedLoading: true,
       maxClusterRadius: 50,
       spiderfyOnMaxZoom: true,
       showCoverageOnHover: false,
       zoomToBoundsOnClick: true,
-      iconCreateFunction: (cluster) => {
+      iconCreateFunction: (cluster: L.MarkerCluster) => {
         const count = cluster.getChildCount();
-        // Determine cluster color based on highest grade in cluster
         let worstGrade = 'E';
-        cluster.getAllChildMarkers().forEach((m) => {
+        cluster.getAllChildMarkers().forEach((m: L.Marker) => {
           const g = (m as any).__grade;
           if (!g) return;
           const gradeOrder: Record<string, number> = { A: 0, B: 1, C: 2, D: 3, E: 4 };
@@ -77,7 +63,7 @@ function MapContent({ buildings }: { buildings: CompactRecord[] }) {
     });
 
     // Individual markers using CircleMarker for performance
-    const markers: L.CircleMarker[] = buildings.map((b, idx) => {
+    const markers: L.CircleMarker[] = buildings.map((b) => {
       const color = getGradeColor(b[8]);
       const radius = b[9] >= 3 ? 8 : b[9] >= 2 ? 7 : 6;
       const marker = L.circleMarker([b[2], b[3]], {
@@ -89,24 +75,19 @@ function MapContent({ buildings }: { buildings: CompactRecord[] }) {
         fillOpacity: 0.8,
       });
 
-      // Store grade for clustering
       (marker as any).__grade = b[8];
 
-      // Build popup content inline (ReactDOM would be too heavy for 100K+ markers)
       const popupContent = buildPopupContent(b);
       marker.bindPopup(popupContent, { maxWidth: 350, className: '' });
 
       return marker;
     });
 
-    // Add all markers to cluster group
     clusterGroup.addLayers(markers);
-
-    // Add cluster group to map
     map.addLayer(clusterGroup);
     clusterGroupRef.current = clusterGroup;
 
-    // Heatmap layer (for 15+ year buildings only if any)
+    // Heatmap layer (for 15+ year buildings)
     const heatData: [number, number, number][] = [];
     for (const b of buildings) {
       if (['A', 'B', 'C'].includes(b[8])) {
@@ -124,12 +105,12 @@ function MapContent({ buildings }: { buildings: CompactRecord[] }) {
         });
         map.addLayer(heat);
         heatRef.current = heat;
-      } catch (e) {
+      } catch (_e) {
         // heatmap layer not available - skip
       }
     }
 
-    // Fit bounds to show all markers
+    // Fit bounds to show all markers (only for reasonable counts)
     if (buildings.length > 0 && buildings.length < 100000) {
       const bounds = L.latLngBounds(buildings.map((b) => [b[2], b[3]] as [number, number]));
       map.fitBounds(bounds, { padding: [30, 30], maxZoom: 12 });
@@ -145,7 +126,7 @@ function MapContent({ buildings }: { buildings: CompactRecord[] }) {
 }
 
 function buildPopupContent(b: CompactRecord): string {
-  const [name, addr, lat, lng, type, date, mfr, maint, grade, count, region, bUse, elevators] = b;
+  const [name, addr, _lat, _lng, _type, date, mfr, maint, grade, count, _region, bUse, elevators] = b;
 
   let html = `<div>
     <div class="building-name">${escapeHtml(name)}</div>

@@ -5,7 +5,7 @@ interface BuildingPopupProps {
 }
 
 export default function BuildingPopup({ building }: BuildingPopupProps) {
-  const [name, addr, lat, lng, type, date, mfr, maint, grade, count, region, bUse, elevators] = building;
+  const [name, addr, _lat, _lng, _type, date, mfr, maint, grade, count, _region, bUse, elevators] = building;
 
   return (
     <div>

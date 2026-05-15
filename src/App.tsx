@@ -18,7 +18,6 @@ export default function App() {
 
   const {
     filtered,
-    gradeCounts,
     grades,
     toggleGrade,
     regions,
