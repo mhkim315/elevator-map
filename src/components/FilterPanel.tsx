@@ -7,8 +7,6 @@ interface FilterPanelProps {
   meta: ElevatorMeta;
   grades: string[];
   onToggleGrade: (g: string) => void;
-  regions: string[];
-  onToggleRegion: (r: string) => void;
   buildingTypes: string[];
   onToggleBuildingType: (t: string) => void;
   searchQuery: string;
@@ -20,8 +18,6 @@ export default function FilterPanel({
   meta,
   grades,
   onToggleGrade,
-  regions,
-  onToggleRegion,
   buildingTypes,
   onToggleBuildingType,
   searchQuery,
@@ -36,13 +32,6 @@ export default function FilterPanel({
         <SearchInput value={searchQuery} onChange={onSearchChange} />
 
         <GradeFilter grades={grades} onToggle={onToggleGrade} />
-
-        <CheckboxFilter
-          label="지역 (시도)"
-          options={meta.regions}
-          selected={regions}
-          onToggle={onToggleRegion}
-        />
 
         <CheckboxFilter
           label="건물 용도"
